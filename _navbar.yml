@@ -1,0 +1,17 @@
+name: "Mywebsite"
+title: "Main"
+type: inverse
+left:
+  - text: "Projects"
+    menu:
+       - text: "RUV"
+         href: ./project1.html
+       - text: "Density estimation"
+         href: ./project2.html
+  - text: "CV"
+    href: ./Sofia_Prieto_cv_2025.pdf
+  - text: "Contact"
+    href: ./contact.html
+right:
+  - icon: fa-github fa-lg
+    href: https://github.com/esprietol/esprite

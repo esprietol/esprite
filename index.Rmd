@@ -1,0 +1,27 @@
+---
+output: 
+  html_document:
+    toc: FALSE
+---
+
+# Hi, I'm Sofía
+
+Welcome! I'm a statistician passionate about bioinformatics.
+
+## About Me
+
+- I’m a Ph.D Researcher at the Data Science Institute in Hasselt University, focused on integration of Single-Cell RNA-Seq Datasets.
+- I’m currently learning about Causal Inference and to Ice Skate.
+- Ask me about high dimensional data, dimensionality reduction techniques, batch correction methods, Bulk RNA Sequencing and Single-Cell RNA Sequencing.
+
+[Click here to view my CV](Sofia_Prieto_CV_2025.pdf)
+
+## Previous projects
+
+| Project | Description | 
+|--------|-------------|
+| [Pseudobulk RUV](https://github.com/esprietol/pseudoRUV) | Pipeline to apply RUV methods to pseudobulk data and perform DEA with Limma-Voom |
+| [RUV PBPS](https://github.com/esprietol/PBPS) | Generate pseudosamples to apply RUVIII in pseudobulk data with no technical replicates |
+
+
+
