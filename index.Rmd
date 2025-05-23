@@ -6,7 +6,7 @@ output:
 
 # Hi, I'm Sofía
 
-Welcome! I'm a statistician passionate about bioinformatics.
+Welcome! I'm a statistician currently working on bioinformatics.
 
 ## About Me
 
@@ -20,8 +20,9 @@ Welcome! I'm a statistician passionate about bioinformatics.
 
 | Project | Description | 
 |--------|-------------|
-| [Pseudobulk RUV](https://github.com/esprietol/pseudoRUV) | Pipeline to apply RUV methods to pseudobulk data and perform DEA with Limma-Voom |
-| [RUV PBPS](https://github.com/esprietol/PBPS) | Generate pseudosamples to apply RUVIII in pseudobulk data with no technical replicates |
+| [RUV PBPS](https://github.com/esprietol/PBPS) | ISCB-LATAM Conference - RUVIII PBPS implementation |
+| [RUV - Pseudobulk](https://github.com/esprietol/ruv-pseudobulk) | Pipeline to apply RUV methods to pseudobulk data and perform DEA with Limma-Voom |
+
 
 
 

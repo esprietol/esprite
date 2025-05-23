@@ -2,12 +2,12 @@ name: "Mywebsite"
 title: "Main"
 type: inverse
 left:
-  # - text: "Projects"
-  #   menu:
-  #      - text: "RUV"
-  #        href: ./project1.html
-  #      - text: "Density estimation"
-  #        href: ./project2.html
+  - text: "Projects"
+    menu:
+       - text: "ATE estimator"
+         href: ./simJointPDF0519.html
+       - text: "Density estimation (soon)"
+         href: ./project2.html
   - text: "CV"
     href: ./Sofia_Prieto_CV_2025.pdf
   - text: "Contact"

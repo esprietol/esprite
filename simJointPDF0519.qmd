@@ -1,0 +1,903 @@
+---
+title: "Differential expression analysis with unmeasured confounders"
+format: 
+  html:
+    # self-contained: true
+editor: visual
+execute:
+  warning: false
+  echo: false
+---
+
+```{r, include=FALSE}
+
+library(matlib)
+library(tidyverse)
+library(ruv)
+library(ggpubr)
+
+```
+
+# Idea:
+
+Differential expression analysis aims to identify genes with differing average expression levels between two or more groups and to quantify these differences as a treatment effect, denoted by $\beta$. Gene expression data is often subject to unknown technical variation, and failing to account for it can lead to estimators of $\beta$ with increased variance and/or bias. In this work, we propose and evaluate an estimator of the causal Average Treatment Effect ($\beta_{ATE}$) that does not require knowledge (either known or estimated) of a technical factor ($W$) present in the model.
+
+## Findings
+
+
+-   In the simulations, the $\hat\alpha_{ATE}$ estimator, that describes the effect of the unwanted variation, outperforms the $\hat\alpha_{RUV4}$ estimator.
+
+-   On average, the $\hat\beta_{ATE}$ estimator outperforms the OLS estimator in a model with no information about technical factors.
+-   The $\hat\beta_{RUV4}$ estimator has a more consistent performance than the $\hat\beta_{ATE}$ estimator.
+-   The magnitude of $\delta$ has an effect over the accuracy of the estimations.
+-   The number of hidden unwanted factors affects the treatment effect estimations in RUV4.
+-   After identifying the joint distribution between the unwanted factor $W$, the treatment, or factor of interest $X$ and the gene expression matrix $\textbf{Y}$ we observed in the simulations that a confounder has the same effect over the estimation of $\beta$ than a mediator.
+
+## The ATE estimator:
+
+Let $(Y_{i1}, \ldots, Y_{ip}), \; i = 1, \ldots, n$, denote the sample observations across $p$ genes and $n$ subjects, let $X_i = 0, 1$ denote the exposure indicator, with $X\sim Bin(1,\pi)$ and let $W_i$ denote the unobserved/unmeasured technical factor, i.e. a latent factor.
+
+For a particular gene $j$, consider the model
+
+$$
+Y_{ij} = \gamma_j + W_i \alpha_j + X_i \beta_j + \varepsilon_{ij},
+$$
+
+or in vector notation
+
+$$
+Y_i = \gamma + W_i \alpha + X_i \beta + E_i.
+$$
+
+It can be proven that the standardisation estimator of the Average Treatment Effect (ATE) is equal to the estimate of $\beta$:
+
+$$
+\frac{1}{n} \sum_{i=1}^n \left[
+\widehat{Y}(W = W_i, X = 1) - \widehat{Y}(W = W_i, X = 0)
+\right]
+= \hat{\beta}.
+$$
+
+We first introduce the following notation:
+
+-   $\mathbb{E}\{E_i \mid X_i = 0\} = \mu_0$ and $\mathbb{E}\{E_i \mid X_i = 1\} = \mu_1$.
+
+-   $Var\{W \mid X_i = 0\} = \nu_0$ and $Var\{W \mid X_i = 1\} = \nu_1$.
+
+and assume that:
+
+-   $\alpha^t\alpha = 1$.
+
+-   $\alpha^t\beta = 0$.
+
+-   $\mathbb{E}\{E_i\} = 0$ and $Var\{E_i\} = \Sigma$.
+
+-   $Var\{Y \mid X = 0\} = \Sigma_0$ and $Var\{Y \mid X = 1\} = \Sigma_1$.
+
+To derive the following expressions:
+
+$$(\Sigma_1 − \Sigma_0)\alpha = (\nu^2_1-\nu^2_0)\alpha.$$ $$ \beta = \mu_1 − \mu_0 − \alpha\alpha^t(\mu_1 − \mu_0).$$ From the first expression we notice that $\alpha$ is the only eigenvector of the matrix $\Sigma_1 − \Sigma_0$, and it can be estimated using the covariance matrices of $Y|X=1$ and $Y|X=0$.
+
+From the second expression, we can find $\hat \beta$ by replacing each parameter with its estimate.
+
+## Confounders and mediators
+
+In the previous model, $W$ and $X$ have an effect over the outcome variables $Y_1, ... , Y_p$ . In some instances the latent factor $W$ is correlated with the exposure $X$. The correlation might happen because the exposure has also an effect over the latent factor, or because the latent factor has also an effect over the exposure. Both types of relationships are described below:
+
+::: {layout="[ [1,1] ]"}
+```{mermaid}
+
+flowchart LR
+
+  A[Exposure] --> B[Outcome]
+  A --> C[W]
+  C --> B
+
+  
+```
+
+```{mermaid}
+
+flowchart LR
+
+  E[Exposure] --> F[Outcome]
+  D[W] --> E
+  D --> F
+
+  
+```
+:::
+
+In the left diagram, $W$ acts as a mediator, while in the right diagram, $W$ acts as a confounder.
+
+If $W$ is a mediator, we assume a linear relationship with $X$:
+
+```{=tex}
+\begin{align}
+W = U + X\delta,
+\end{align}
+```
+where $U$ is an unobserved random noise variable assumed to follow a normal distribution with mean $\mu_u$ and standard deviation $\sigma_u$, and is independent of $X$. The parameter $\delta$ characterizes the extent of the mediation.
+
+Therefore, the marginal distribution of $W|X$ is given by:
+
+```{=tex}
+\begin{align}
+W|X=0 &\sim \mathcal{N}(\mu_u, \sigma_u) \\
+W|X=1 &\sim \mathcal{N}(\delta + \mu_u, \sigma_u)
+\end{align}
+```
+Using the law of total probability, the probability density function (pdf) of $W$, denoted $f_w$, is given by:
+
+```{=tex}
+\begin{align}
+f_w = f_{w|x=1}\pi + f_{w|x=0}(1 - \pi)
+\end{align}
+```
+Using Bayes' theorem, the conditional pdf of $X$ given $W$, denoted $f_{x|w}$, is given by:
+
+```{=tex}
+\begin{align}
+f_{x|w} = \dfrac{f_{w|x}f_x}{f_w}
+\end{align}
+```
+Without loss of generality, assume that $\pi = 0.5$, hence $\pi = 1 - \pi$, and
+
+```{=tex}
+\begin{align}
+f_{x|w} &= \dfrac{f_{w|x}\pi}{\pi[f_{w|x=1} + f_{w|x=0}]} = \dfrac{f_{w|x}}{f_{w|x=1} + f_{w|x=0}}
+\end{align}
+```
+Replacing the conditional densities, we obtain:
+
+```{=tex}
+\begin{align}
+f_{x|w} &= \dfrac{\dfrac{1}{\sqrt{2\pi\sigma_u^2}} \exp\left\{ -\dfrac{[w - (x\delta + \mu_u)]^2}{2\sigma_u^2} \right\}}{\dfrac{1}{\sqrt{2\pi\sigma_u^2}} \left[ \exp\left\{ -\dfrac{[w - (\delta + \mu_u)]^2}{2\sigma_u^2} \right\} + \exp\left\{ -\dfrac{(w - \mu_u)^2}{2\sigma_u^2} \right\} \right]}
+\end{align}
+```
+In particular, if $U \sim \mathcal{N}(0, 1)$ (i.e., a standard normal distribution), we obtain:
+
+```{=tex}
+\begin{align}
+f_{x|w} &= \dfrac{\exp\left\{ \dfrac{w^2}{2} \right\} \exp\left\{ \dfrac{\delta^2 - 2w\delta x}{2} \right\}}{\exp\left\{ \dfrac{w^2}{2} \right\} \left[ \exp\left\{ \dfrac{\delta^2 - 2w\delta}{2} \right\} + 1 \right]}
+\end{align}
+```
+If $X = 1$, then:
+
+```{=tex}
+\begin{align}
+f_{x|w} &= \dfrac{\exp\left\{ \dfrac{\delta^2 - 2w\delta}{2} \right\}}{\exp\left\{ \dfrac{\delta^2 - 2w\delta}{2} \right\} + 1} = \dfrac{1}{\exp\left\{ \dfrac{2w\delta - \delta^2}{2} \right\} + 1}
+\end{align}
+```
+Analogously, if $X = 0$, then:
+
+```{=tex}
+\begin{align}
+f_{x|w} &= \dfrac{\exp\left\{ \dfrac{\delta^2}{2} \right\}}{\exp\left\{ \dfrac{\delta^2 - 2w\delta}{2} \right\} + 1}
+\end{align}
+```
+## Alternatives
+
+We compare the results with:
+
+-   A naive linear regression model without the technical factor: $Y_i = \gamma + X_i \beta + E_i.$
+-   The RUV4 model with no negative control genes.
+-   A gold standard model with the "unobserved' technical factor: $Y_i = \gamma + W_i \alpha + X_i \beta + E_i.$
+
+# Simulated data
+
+We simulate the matrix $\textbf{Y}$ for a sample with $n=100$ subjects and $p=50$ genes following the model
+
+$$
+Y_i = \gamma + W_i \alpha + X_i \beta + E_i.
+$$
+
+The parameters $\alpha$ and $\beta$ are randomly generated from two different zero mean normal distributions. $\gamma$ is fixed at 1 for all genes and subjects. Under no confounding or mediation, $X$ follows a binomial distribution with $\pi=0.5$ and $W$ follows a standard normal distribution.
+
+When $W$ is a mediator, we follow the model proposed by Wang et al. \cite{cate2017}, and characterized the relationship as:
+
+```{=tex}
+\begin{align}
+   W = U + X\delta,
+\end{align}
+```
+where $U$ follows a standard normal distribution.
+
+When $W$ is a confounder, we generate $X$ from a Bernoulli distribution with $\pi$ given by $$ \pi_{X|W}= \frac{1}{1+\exp\left\{\frac{2w\delta -\delta^2}{2}\right\}}$$
+
+= \frac{1}{1+\exp{\left{ \frac{2w\delta -\delta^2}{2}\right}}}, ensuring that $f_{w|x}$ and $f_{x|w}$ agree with the underlying joint distribution $f_{xwy}$.
+
+To create a more realistic setting, scenarios in which a percentage of the $\beta$ parameters are set to zero are also considered.
+
+```{r,echo =FALSE}
+
+
+
+simjd <- function( samples = 100,
+                      g = 200,         # total number of genes
+                      dg = 50,         # number of differentially expressed genes
+                      seed.par = 1000, # random seed for parameters
+                      seed.noise = 10,
+                      seed.var = 1000, # random seed for noise
+                      a.sd = 1,        # standard deviation of alpha
+                      b.sd = 1.5,      # standard deviation of beta
+                      gm = 0,          # degree of confounding between X and U
+                      noise.sd = 0.01,
+                      relationship = 'mediator'){ # standard deviation of noise
+  # samples = 100
+  # g <- 200
+  # dg <- 50
+  # seed.par <- 1000
+  # seed.var = 1000
+  # a.sd <- 1
+  # b.sd <- 1.5
+  # gm <- 1
+  # noise.sd <- 0.01
+  # relationship='confounder'
+
+
+  ndg <- g-dg
+  cont <- c(rep(F,dg),rep(T,ndg))
+
+  set.seed(seed.var)
+
+  W <- rnorm(samples)
+  X0 <- rbinom(n=samples,size=1,prob=0.5)
+
+  set.seed(seed.par)
+  alpha <- rnorm(g,sd=a.sd)
+  betad <- rnorm(dg,sd=b.sd)
+  betand <- rep(0,ndg)
+  beta <- c(betad,betand)
+  # alpha <- alpha0 - Proj(alpha0,beta)
+  # alpha <- alpha/sqrt(sum(alpha^2))
+
+   if(relationship == 'mediator'){
+
+    X <- X0
+    U <- X*gm + W
+
+   }
+   if (relationship == 'confounder'){
+
+    set.seed(seed.var)
+    U <- W
+    pi <- 1/(1+exp((2*gm*U-gm^2)/2))
+    X <- rbinom(n=samples,size=1,prob=pi)
+    
+
+  }
+
+  set.seed(seed.noise)
+
+  e <-sapply(1:g,function (y) rnorm(samples,sd = noise.sd))
+  Y <- 1 + U%*%t(alpha) + X%*%t(c(betad,betand)) + e
+
+  pars <- list(  g=g,dg=dg,seed=seed.par,a.sd=a.sd,b.sd=b.sd,gm=gm )
+
+  return(list(pars=pars,W=W,X0=X0,X=X,U=U,Y=Y,alpha=alpha,beta=beta, noDE=cont))
+
+}
+
+
+model.fit <- function(sim.out){
+
+  sigma0 <- cov(sim.out$Y[sim.out$X
+                        ==0,])
+  sigma1 <- cov(sim.out$Y[sim.out$X==1,])
+
+  ybar0 <- colMeans(sim.out$Y[sim.out$X==0,])
+  ybar1 <- colMeans(sim.out$Y[sim.out$X==1,])
+
+  Ydiff <- ybar1 -ybar0
+  sigmadiff <- sigma1-sigma0
+
+  alpha.est <- eigen(sigmadiff)
+  beta.est <- Ydiff - alpha.est$vectors[,1]%*% t(alpha.est$vectors[,1])%*% Ydiff
+
+  return(list(alpha.est = alpha.est,beta.est = beta.est))
+}
+
+naive.fit <- function(sim.out){
+
+  Y <- sim.out$Y
+  X <- sim.out$X
+  n.fit <- lm(Y ~ X)
+
+  return(n.fit)
+
+}
+
+gold.fit <- function(sim.out){
+
+  Y <- sim.out$Y
+  X <- sim.out$X
+  U <- sim.out$U
+  g.fit <- lm(Y ~ X+U)
+
+
+  return(g.fit)
+
+}
+
+
+comp.modelsSE <- function(sim,k=1, plot=F){
+
+  fit.ATE <- model.fit(sim)
+  fit.naive <- naive.fit(sim)
+  fit.gold <- gold.fit(sim)
+  suppressWarnings({
+fit.ruv4 <- RUV4(Y=sim$Y, X=sim$X,ctl=1:sim$pars$g,k=k)
+})
+
+  betas <- bind_cols(true.beta=sim$beta, ATE.beta=as.vector(fit.ATE$beta.est), RUV4.beta=as.vector(fit.ruv4$betahat), naive.beta=fit.naive$coefficients[2,], gold.beta = fit.gold$coefficients[2,])
+   suppressWarnings({ rownames(betas) <- paste0('gene',1:sim$pars$g)})
+
+    SE.betas <- (betas-sim$beta)^2
+
+   alphas <-  bind_cols(true.alpha=sim$alpha, ATE.alpha=fit.ATE$alpha.est$vectors[,1], RUV4.alpha= t(fit.ruv4$alpha), gold.alpha = fit.gold$coefficients[3,])
+   suppressWarnings({ rownames(alphas) <- paste0('gene',1:sim$pars$g)})
+  SE.alphas <- (alphas-sim$alpha)^2
+
+  if(isTRUE(plot)){
+
+    betas <- betas %>% pivot_longer(-true.beta, names_to='method')
+
+
+  alphas <-  alphas %>% pivot_longer(-true.alpha, names_to='method')
+
+  p.b <- ggplot(betas, aes(x=true.beta,y=value))+ geom_point()+ facet_wrap(~method,scales = 'free_y') +
+        geom_text(data = cor.m, aes(x = 0, y = 3.5, label = r))
+
+  p.a <- ggplot(alphas, aes(x=true.alpha,y=value,color=method))+ geom_point()
+
+  return(list(fit.ATE=fit.ATE, fit.naive=fit.naive, fit.gold=fit.gold, fit.ruv4=fit.ruv4, betas =p.b, alphas=p.a, SE.alphas = SE.alphas, SE.betas=SE.betas))
+
+  }else{
+    return(list(fit.ATE=fit.ATE, fit.naive=fit.naive, fit.gold=fit.gold, fit.ruv4=fit.ruv4, SE.alphas = SE.alphas, SE.betas=SE.betas,alphas=alphas, betas=betas))
+  }
+}
+
+BV.comp <- function(pars0,SEs0,DEG){
+
+  pars0 <- lapply(pars0, rownames_to_column,var='gene')
+  pars0 <- lapply (pars0, function (x) cbind(x, DEG= DEG))
+  pars <- bind_rows(pars0, .id = "it")%>% mutate(gene=fct_inorder(gene))
+
+  methods <- colnames(pars)[grepl('.',colnames(pars),fixed=T)]
+  true.name <- colnames(pars)[grepl('true.',colnames(pars),fixed=T)]
+
+  mean.pars <- group_by(pars,gene,DEG) %>% summarise(across(contains("."),list(avg=mean)))
+
+  methods.avg <- colnames(mean.pars)[grepl('avg',colnames(mean.pars),fixed=T)]
+  true.avgname <- methods.avg[grepl('true.',methods.avg,fixed=T)]
+  #left join to guarantee same order
+  full.pars <- left_join(pars,mean.pars,by=c('gene','DEG')) %>% ungroup()
+
+  pars.mat <- full.pars %>% select(all_of(setdiff(methods,true.name)))
+  parsavg.mat <- full.pars%>% select(all_of(setdiff(methods.avg,true.avgname)))
+
+  var <- (pars.mat-parsavg.mat)^2 %>% bind_cols(full.pars[,c('gene','DEG')]) %>% group_by(gene,DEG) %>% summarise(across(everything(),mean))
+
+
+  bias2 <- mutate(mean.pars,across(setdiff(methods.avg,true.avgname),~(.x-get(true.avgname))^2)) %>% select(-true.avgname)
+  try(colnames(bias2) <- colnames(var))
+
+  SEs0 <- lapply(SEs0, rownames_to_column,var='gene')
+  SEs0 <- lapply (SEs0, function (x) cbind(x, DEG= DEG))
+  SEs <- bind_rows(SEs0, .id = "it")
+  SEs$gene <- factor(SEs$gene,levels=paste0('gene',1:length(DEG)))
+
+  MSEs <- group_by(SEs,gene,DEG)%>% summarise(across(contains("."),mean))
+  pivot_longer(MSEs,contains('.'),values_to = 'MSE',names_to = 'Method')
+
+  BVs <-  pivot_longer(var, contains('.'),values_to = 'Var',names_to = 'Method') %>% left_join(pivot_longer(bias2, contains('.'),values_to = 'Bias2',names_to = 'Method'),by=c('gene','Method','DEG')) %>% mutate(gene=as.factor(gene)) %>% left_join(pivot_longer(MSEs,contains('.'),values_to = 'MSE',names_to = 'Method'), by=c('gene','Method','DEG')) %>% pivot_longer(all_of(c('Bias2','Var','MSE')),names_to = 'Metric')
+
+  pbv <- BVs %>% ggplot(aes(x=gene,y=value,color=Metric)) + geom_point(alpha=0.5) +
+    facet_grid(Method~DEG,scales = 'free_y') + theme(axis.text.x=element_blank(),axis.ticks.x=element_blank())
+
+
+  p1 <-  pivot_longer(SEs, contains('.'),values_to = 'SE',names_to = 'Method') %>% filter(!grepl('true', Method)) %>% ggplot(aes(x=gene,y=SE,color=DEG)) + geom_boxplot(alpha=0.5) + stat_summary(aes(shape="MSE"),fun.y=mean, geom="point",color='black',show.legend = T) +scale_shape_manual( values=c("MSE"=18)) +
+  labs(shape = " ", color = "DEG") +
+    facet_wrap('Method',scales = 'free_y') + theme(axis.text.x=element_blank(),axis.ticks.x=element_blank())+labs(shape="MSE")
+
+
+   pbv2 <- BVs %>% ggplot(aes(x=Method,y=value,color=Metric)) +  geom_boxplot(alpha=0.5) + #stat_summary(fun.y=mean, geom="point",color='black',shape=18,(aes(group=Metric))) +
+     facet_grid('DEG',scales = 'free_y')
+
+
+  return(list(MSEs=MSEs,Var=var,Bias2=bias2, VB=pbv ,SE.plot=p1, MSE.DEG=pbv2 ))
+
+}
+
+
+```
+
+# Results
+
+::: panel-tabset
+## Assuming differential expression in all genes
+
+::: panel-tabset
+### No mediator ($\delta =0$)
+
+::: panel-tabset
+```{r, results='asis'}
+
+it=10
+
+sims <- lapply(runif(it,1,99999999), function (x) simjd(g=50,dg=50,gm=0,seed.noise=x,seed.var = x-1))
+DEG <- factor(c(rep(1,sims[[1]]$pars$dg),rep(0,(sims[[1]]$pars$g-sims[[1]]$pars$dg))))
+
+SEs0 <- lapply(sims, function(x) comp.modelsSE(x))
+SEs0.alpha <- lapply(SEs0, function(x) x$SE.alphas)
+SEs0.beta <- lapply(SEs0, function(x) x$SE.betas)
+pars0.alpha <- lapply(SEs0, function(x) x$alphas)
+pars0.beta <- lapply(SEs0, function(x) x$betas)
+
+res_alpha <- BV.comp(pars0.alpha,SEs0.alpha,DEG)
+res_beta <- BV.comp(pars0.beta,SEs0.beta,DEG)
+
+cat(knitr::knit_expand(text=paste0('\n#### ','SE', '{-}\n')))
+
+print(res_alpha$SE.plot)
+print(res_beta$SE.plot)
+cat(knitr::knit_expand(text=paste0("\n\n")))
+cat(knitr::knit_expand(text=paste0('\n#### ','Squared Bias and Variance', '{-}\n')))
+
+print(res_alpha$VB)
+print(res_beta$VB)
+cat(knitr::knit_expand(text=paste0("\n\n")))
+cat(knitr::knit_expand(text=paste0('\n#### ','Per DEG', '{-}\n')))
+
+print(res_alpha$MSE.DEG)
+print(res_beta$MSE.DEG)
+cat(knitr::knit_expand(text=paste0("\n\n")))
+
+
+
+```
+:::
+
+### One mediator with $\delta=2$
+
+::: panel-tabset
+```{r, results='asis'}
+
+sims <- lapply(runif(it,1,99999999), function (x) simjd(g=50,dg=50,gm=2,seed.noise=x,seed.var = x-1))
+DEG <- factor(c(rep(1,sims[[1]]$pars$dg),rep(0,(sims[[1]]$pars$g-sims[[1]]$pars$dg))))
+
+SEs0 <- lapply(sims, function(x) comp.modelsSE(x))
+SEs0.alpha <- lapply(SEs0, function(x) x$SE.alphas)
+SEs0.beta <- lapply(SEs0, function(x) x$SE.betas)
+pars0.alpha <- lapply(SEs0, function(x) x$alphas)
+pars0.beta <- lapply(SEs0, function(x) x$betas)
+
+res_alpha <- BV.comp(pars0.alpha,SEs0.alpha,DEG)
+res_beta <- BV.comp(pars0.beta,SEs0.beta,DEG)
+
+
+cat(knitr::knit_expand(text=paste0('\n#### ','SE', '{-}\n')))
+
+print(res_alpha$SE.plot)
+print(res_beta$SE.plot)
+cat(knitr::knit_expand(text=paste0("\n\n")))
+cat(knitr::knit_expand(text=paste0('\n#### ','Squared Bias and Variance', '{-}\n')))
+
+print(res_alpha$VB)
+print(res_beta$VB)
+cat(knitr::knit_expand(text=paste0("\n\n")))
+cat(knitr::knit_expand(text=paste0('\n#### ','Per DEG', '{-}\n')))
+
+print(res_alpha$MSE.DEG)
+print(res_beta$MSE.DEG)
+cat(knitr::knit_expand(text=paste0("\n\n")))
+
+
+```
+:::
+
+### Changing the $\delta$ values
+
+```{r}
+
+bigMSE <- function(it=10,g=50,dg=50,gm=0,relationship='mediator',k=1){
+
+  sims <- lapply(runif(it,1,99999999), function (x) simjd(g=g,dg=dg,gm=gm,seed.noise=x, seed.var = x-1, relationship=relationship))
+  DEG <- factor(c(rep(1,sims[[1]]$pars$dg),rep(0,(sims[[1]]$pars$g-sims[[1]]$pars$dg))))
+
+
+  SEs0 <- lapply(sims, function(x) comp.modelsSE(x,k=k))
+
+  pars0.alpha <- lapply(SEs0, function(x) x$alphas)
+  pars0.beta <- lapply(SEs0, function(x) x$betas)
+  SEs0.alpha <- lapply(SEs0, function(x) x$SE.alphas)
+  SEs0.beta <- lapply(SEs0, function(x) x$SE.betas)
+
+  pars0.alpha <- lapply(SEs0, function(x) x$alphas)
+  pars0.beta <- lapply(SEs0, function(x) x$betas)
+
+  res_alpha <- BV.comp(pars0.alpha,SEs0.alpha,DEG)
+  res_beta <- BV.comp(pars0.beta,SEs0.beta,DEG)
+
+  # testMSE <- select(ungroup(res_beta$Var),-gene,-DEG)+select(ungroup(res_beta$Bias),-gene,-DEG)
+  # testMSE-select(ungroup(res_beta$MSEs),-gene,-DEG,-true.beta)
+
+  return(list(alphas=pars0.alpha, betas=pars0.beta, mse_alpha = res_alpha$MSEs, mse_beta=res_beta$MSEs, var_alpha=res_alpha$Var, var_beta=res_beta$Var, bias_alpha=res_alpha$Bias2, bias_beta=res_beta$Bias2))
+
+}
+
+
+plotMetric <- function(diffDelta0,gene.p='gene1',est, xlab="x"){
+
+  diffDelta <- bind_rows(diffDelta0, .id = "Bigit")
+  diffDelta$Bigit <- as.numeric(diffDelta$Bigit)
+  ests <- bind_rows(est, .id = "Bigit")
+  ests$Bigit <- as.numeric(ests$Bigit)
+  colnames(ests) <- gsub("\\..*","",colnames(ests))
+
+  p.1gene <- pivot_longer( diffDelta, contains('.'),values_to = "Metric", names_to = "Method")%>% filter(gene==gene.p,!grepl('true', Method)) %>% ggplot(aes(x=Bigit,y=Metric,color=Method)) + geom_point() +
+    labs(x=xlab)+theme(legend.position="bottom")
+
+  p.allgenes <- pivot_longer( diffDelta, contains('.'),values_to = "Metric", names_to = "Method") %>% filter(!grepl('true', Method)) %>% ggplot(aes(x=as.factor(Bigit),y=Metric,color=Method))+geom_point(alpha=0.4)+ geom_boxplot(alpha=0.4) + #geom_quantile(method = "rq",lambda=0.5,color="black")+
+    labs(x=xlab) +
+    facet_wrap("Method",scales = 'free_y')+theme(legend.position="bottom")
+
+  p.estMetric <- bind_cols(ests,diffDelta[,-1]) %>% pivot_longer( contains('.'),values_to = "Metric", names_to = "Method")%>% filter(!grepl('true.', Method)) %>% ggplot(aes(x=true,y=Metric,color=Method))+geom_point() + labs(x="True parameter")+facet_wrap("Method",scales = 'free_y')+theme(legend.position="bottom")
+
+
+  return(list(p.1gene=p.1gene, p.allgenes=p.allgenes, p.estMetric=p.estMetric))
+
+}
+
+diffDelta <- lapply(1:10, function (x) bigMSE(it=it,gm=x))
+
+est.alphas <- lapply(diffDelta, function(x) x$alphas)
+diffDelta.alpha0 <- lapply(diffDelta, function(x) x$mse_alpha)
+est.alphas1 <- lapply(est.alphas, function (x) x[[1]])
+Delta.MSE.alpha.plots <- plotMetric(diffDelta.alpha0, est = est.alphas1,xlab="Delta")
+
+diffDelta.alpha0 <- lapply(diffDelta, function(x) x$var_alpha)
+Delta.Var.alpha.plots <- plotMetric(diffDelta.alpha0, est = est.alphas1,xlab="Delta")
+
+diffDelta.alpha0 <- lapply(diffDelta, function(x) x$bias_alpha)
+Delta.Bias.alpha.plots <- plotMetric(diffDelta.alpha0, est = est.alphas1,xlab="Delta")
+
+
+est.betas <- lapply(diffDelta, function(x) x$betas)
+est.betas1 <- lapply(est.betas, function (x) x[[1]])
+# add gene labels
+diffDelta.beta0 <- lapply(diffDelta, function(x) x$mse_beta)
+Delta.MSE.beta.plots <- plotMetric(diffDelta.beta0, est = est.betas1,xlab="Delta")
+
+diffDelta.beta0 <- lapply(diffDelta, function(x) x$var_beta)
+Delta.Var.beta.plots <- plotMetric(diffDelta.beta0, est = est.betas1,xlab="Delta")
+
+diffDelta.beta0 <- lapply(diffDelta, function(x) x$bias_beta)
+Delta.Bias.beta.plots <- plotMetric(diffDelta.beta0, est = est.betas1,xlab="Delta")
+
+
+
+
+```
+
+::: panel-tabset
+```{r, results='asis'}
+
+# cat(knitr::knit_expand(text=paste0('\n#### ','One gene', '{-}\n')))
+#
+# print(ggarrange(Delta.MSE.alpha.plots$p.1gene,Delta.MSE.beta.plots$p.1gene,common.legend = F ))
+# print(ggarrange(Delta.Var.alpha.plots$p.1gene,Delta.Var.beta.plots$p.1gene,common.legend = F ))
+# print(ggarrange(Delta.Bias.alpha.plots$p.1gene,Delta.Bias.beta.plots$p.1gene,common.legend = F ))
+#
+# cat(knitr::knit_expand(text=paste0("\n\n")))
+cat(knitr::knit_expand(text=paste0('\n#### ','All genes', '{-}\n')))
+
+
+print(ggarrange(Delta.MSE.alpha.plots$p.allgenes,Delta.MSE.beta.plots$p.allgenes,common.legend = F,labels='MSE'))
+print(ggarrange(Delta.Var.alpha.plots$p.allgenes,Delta.Var.beta.plots$p.allgenes,common.legend = F ,labels='Variance'))
+print(ggarrange(Delta.Bias.alpha.plots$p.allgenes,Delta.Bias.beta.plots$p.allgenes,common.legend = F,labels='Bias2' ))
+
+cat(knitr::knit_expand(text=paste0("\n\n")))
+cat(knitr::knit_expand(text=paste0('\n#### ','MSE Vs true parameter', '{-}\n')))
+
+print(ggarrange(Delta.MSE.alpha.plots$p.estMetric,Delta.MSE.beta.plots$p.estMetric,common.legend = F,labels='MSE' ))
+print(ggarrange(Delta.Var.alpha.plots$p.estMetric,Delta.Var.beta.plots$p.estMetric,common.legend = F,labels='Variance' ))
+print(ggarrange(Delta.Bias.alpha.plots$p.estMetric,Delta.Bias.beta.plots$p.estMetric,common.legend = F,labels='Bias2' ))
+cat(knitr::knit_expand(text=paste0("\n\n")))
+
+```
+:::
+
+### Misspecified number of unwanted factors in RUV4 with $\delta=2$
+
+::: panel-tabset
+```{r}
+
+diffk <- lapply(1:10, function (x) bigMSE(it=it,gm=2,k=x,))
+
+est.alphas <- lapply(diffk, function(x) x$alphas)
+# add gene labels
+diffk.alpha0 <- lapply(diffk, function(x) x$mse_alpha)
+est.alphas1 <- lapply(est.alphas, function (x) x[[1]])
+# alphas not included bc ruv4 has more than one unwanted factor
+# k.alpha.plots <- plotMetric(diffk.alpha0, est = est.alphas1,xlab="k unwanted factors")
+
+est.betas <- lapply(diffk, function(x) x$betas)
+est.betas1 <- lapply(est.betas, function (x) x[[1]])
+
+
+diffDelta.beta0 <- lapply(diffDelta, function(x) x$mse_beta)
+Delta.MSE.beta.plots <- plotMetric(diffDelta.beta0, est = est.betas1,xlab="Delta")
+
+diffDelta.beta0 <- lapply(diffDelta, function(x) x$var_beta)
+Delta.Var.beta.plots <- plotMetric(diffDelta.beta0, est = est.betas1,xlab="Delta")
+
+diffDelta.beta0 <- lapply(diffDelta, function(x) x$bias_beta)
+Delta.Bias.beta.plots <- plotMetric(diffDelta.beta0, est = est.betas1,xlab="Delta")
+
+# add gene labels
+diffk.beta0 <- lapply(diffk, function(x) x$mse_beta)
+k.MSE.beta.plots <- plotMetric(diffk.beta0, est = est.betas1,xlab="k unwanted factors")
+
+diffk.beta0 <- lapply(diffk, function(x) x$var_beta)
+k.Var.beta.plots <- plotMetric(diffk.beta0, est = est.betas1,xlab="k unwanted factors")
+
+diffk.beta0 <- lapply(diffk, function(x) x$bias_beta)
+k.Bias.beta.plots <- plotMetric(diffk.beta0, est = est.betas1,xlab="k unwanted factors")
+
+
+```
+
+```{r, results='asis'}
+
+# cat(knitr::knit_expand(text=paste0('\n## ','One gene', '{-}\n')))
+# # alphas not printed bc ruv4 has more than one unwanted factor
+# print(ggarrange(k.MSE.beta.plots$p.1gene,k.Bias.beta.plots$p.1gene,k.Var.beta.plots$p.1gene,common.legend = T ,labels=c('MSE','Bias','Variance'),ncol=3,legend='bottom'))
+# cat(knitr::knit_expand(text=paste0("\n\n")))
+cat(knitr::knit_expand(text=paste0('\n## ','All genes', '{-}\n')))
+
+#print(k.alpha.plots$p.allgenes)
+print(ggarrange(k.MSE.beta.plots$p.allgenes,k.Bias.beta.plots$p.allgenes,k.Var.beta.plots$p.allgenes,common.legend = T ,labels=c('MSE','Bias2','Variance'),ncol=3,legend='bottom'))
+cat(knitr::knit_expand(text=paste0("\n\n")))
+cat(knitr::knit_expand(text=paste0('\n## ','MSE Vs true parameter', '{-}\n')))
+
+#print(k.alpha.plots$p.estMSE)
+print(ggarrange(k.MSE.beta.plots$p.estMetric,k.Bias.beta.plots$p.estMetric,k.Var.beta.plots$p.estMetric,common.legend = T ,labels=c('MSE','Bias2','Variance'),ncol=3,legend='bottom'))
+cat(knitr::knit_expand(text=paste0("\n\n")))
+
+```
+:::
+:::
+
+## Only 30 DEG and one mediator
+
+::: panel-tabset
+### With $\delta=2$
+
+::: panel-tabset
+```{r, results='asis'}
+
+sims <- lapply(runif(it,1,99999999), function (x) simjd(g=50,dg=30,gm=2,seed.noise=x,seed.var = x-1))
+DEG <- factor(c(rep(1,sims[[1]]$pars$dg),rep(0,(sims[[1]]$pars$g-sims[[1]]$pars$dg))))
+
+SEs0 <- lapply(sims, function(x) comp.modelsSE(x))
+SEs0.alpha <- lapply(SEs0, function(x) x$SE.alphas)
+SEs0.beta <- lapply(SEs0, function(x) x$SE.betas)
+pars0.alpha <- lapply(SEs0, function(x) x$alphas)
+pars0.beta <- lapply(SEs0, function(x) x$betas)
+
+res_alpha <- BV.comp(pars0.alpha,SEs0.alpha,DEG)
+res_beta <- BV.comp(pars0.beta,SEs0.beta,DEG)
+
+
+cat(knitr::knit_expand(text=paste0('\n#### ','SE', '{-}\n')))
+
+print(res_alpha$SE.plot)
+print(res_beta$SE.plot)
+cat(knitr::knit_expand(text=paste0("\n\n")))
+cat(knitr::knit_expand(text=paste0('\n#### ','Squared Bias and Variance', '{-}\n')))
+
+print(res_alpha$VB)
+print(res_beta$VB)
+cat(knitr::knit_expand(text=paste0("\n\n")))
+cat(knitr::knit_expand(text=paste0('\n#### ','Per DEG', '{-}\n')))
+
+print(res_alpha$MSE.DEG)
+print(res_beta$MSE.DEG)
+cat(knitr::knit_expand(text=paste0("\n\n")))
+
+
+```
+:::
+
+### Changing the $\delta$ values
+
+::: panel-tabset
+```{r}
+
+deltas <- c(0.5,1,1.5,2)
+
+diffDelta <- lapply(deltas, function (x) bigMSE(it=it,gm=x, dg=30))
+
+est.alphas <- lapply(diffDelta, function(x) x$alphas)
+diffDelta.alpha0 <- lapply(diffDelta, function(x) x$mse_alpha)
+est.alphas1 <- lapply(est.alphas, function (x) x[[1]])
+Delta.MSE.alpha.plots <- plotMetric(diffDelta.alpha0, est = est.alphas1,xlab="Delta")
+
+diffDelta.alpha0 <- lapply(diffDelta, function(x) x$var_alpha)
+Delta.Var.alpha.plots <- plotMetric(diffDelta.alpha0, est = est.alphas1,xlab="Delta")
+
+diffDelta.alpha0 <- lapply(diffDelta, function(x) x$bias_alpha)
+Delta.Bias.alpha.plots <- plotMetric(diffDelta.alpha0, est = est.alphas1,xlab="Delta")
+
+
+est.betas <- lapply(diffDelta, function(x) x$betas)
+est.betas1 <- lapply(est.betas, function (x) x[[1]])
+# add gene labels
+diffDelta.beta0 <- lapply(diffDelta, function(x) x$mse_beta)
+Delta.MSE.beta.plots <- plotMetric(diffDelta.beta0, est = est.betas1,xlab="Delta")
+
+diffDelta.beta0 <- lapply(diffDelta, function(x) x$var_beta)
+Delta.Var.beta.plots <- plotMetric(diffDelta.beta0, est = est.betas1,xlab="Delta")
+
+diffDelta.beta0 <- lapply(diffDelta, function(x) x$bias_beta)
+Delta.Bias.beta.plots <- plotMetric(diffDelta.beta0, est = est.betas1,xlab="Delta")
+
+
+
+
+```
+
+```{r, results='asis'}
+
+# cat(knitr::knit_expand(text=paste0('\n#### ','One gene', '{-}\n')))
+#
+# print(ggarrange(Delta.MSE.alpha.plots$p.1gene,Delta.MSE.beta.plots$p.1gene,common.legend = F ))
+# print(ggarrange(Delta.Var.alpha.plots$p.1gene,Delta.Var.beta.plots$p.1gene,common.legend = F ))
+# print(ggarrange(Delta.Bias.alpha.plots$p.1gene,Delta.Bias.beta.plots$p.1gene,common.legend = F ))
+#
+# cat(knitr::knit_expand(text=paste0("\n\n")))
+cat(knitr::knit_expand(text=paste0('\n#### ','All genes', '{-}\n')))
+
+
+print(ggarrange(Delta.MSE.alpha.plots$p.allgenes,Delta.MSE.beta.plots$p.allgenes,common.legend = F,labels='MSE'))
+print(ggarrange(Delta.Var.alpha.plots$p.allgenes,Delta.Var.beta.plots$p.allgenes,common.legend = F ,labels='Variance'))
+print(ggarrange(Delta.Bias.alpha.plots$p.allgenes,Delta.Bias.beta.plots$p.allgenes,common.legend = F,labels='Bias2' ))
+
+cat(knitr::knit_expand(text=paste0("\n\n")))
+cat(knitr::knit_expand(text=paste0('\n#### ','MSE Vs true parameter', '{-}\n')))
+
+print(ggarrange(Delta.MSE.alpha.plots$p.estMetric,Delta.MSE.beta.plots$p.estMetric,common.legend = F,labels='MSE' ))
+print(ggarrange(Delta.Var.alpha.plots$p.estMetric,Delta.Var.beta.plots$p.estMetric,common.legend = F,labels='Variance' ))
+print(ggarrange(Delta.Bias.alpha.plots$p.estMetric,Delta.Bias.beta.plots$p.estMetric,common.legend = F,labels='Bias2' ))
+cat(knitr::knit_expand(text=paste0("\n\n")))
+
+```
+:::
+:::
+
+## Only 30 DEG and one confounder
+
+::: panel-tabset
+### With $\delta=2$
+
+::: panel-tabset
+```{r}
+
+sims <- lapply(runif(it,1,99999999), function (x) simjd(g=50,dg=30,gm=2,seed.noise=x,seed.var = x-1,relationship='confounder'))
+DEG <- factor(c(rep(1,sims[[1]]$pars$dg),rep(0,(sims[[1]]$pars$g-sims[[1]]$pars$dg))))
+
+lapply(1:10,function (x) table(sims[[x]]$X))
+
+SEs0 <- lapply(sims, function(x) comp.modelsSE(x))
+SEs0.alpha <- lapply(SEs0, function(x) x$SE.alphas)
+SEs0.beta <- lapply(SEs0, function(x) x$SE.betas)
+pars0.alpha <- lapply(SEs0, function(x) x$alphas)
+pars0.beta <- lapply(SEs0, function(x) x$betas)
+
+res_alphaC <- BV.comp(pars0.alpha,SEs0.alpha,DEG)
+res_betaC <- BV.comp(pars0.beta,SEs0.beta,DEG)
+
+
+
+```
+
+```{r,  results='asis'}
+
+
+cat(knitr::knit_expand(text=paste0('\n### ','SE', '{-}\n')))
+
+print(res_alphaC$SE.plot)
+print(res_betaC$SE.plot)
+cat(knitr::knit_expand(text=paste0("\n\n")))
+cat(knitr::knit_expand(text=paste0('\n### ','Squared Bias and Variance', '{-}\n')))
+
+print(res_alphaC$VB)
+print(res_betaC$VB)
+cat(knitr::knit_expand(text=paste0("\n\n")))
+cat(knitr::knit_expand(text=paste0('\n### ','Per DEG', '{-}\n')))
+
+print(res_alphaC$MSE.DEG)
+print(res_betaC$MSE.DEG)
+cat(knitr::knit_expand(text=paste0("\n\n")))
+
+cat(knitr::knit_expand(text=paste0('\n### ','MSE ATE - MSE RUV4', '{-}\n')))
+
+
+pnew <- res_betaC$MSEs %>% select(gene,DEG,ATE.beta,RUV4.beta) %>% mutate(ATE.RUV4=ATE.beta-RUV4.beta,ATE_better = ifelse(ATE.RUV4<0,1,0)) %>% ggplot(aes(x=gene,y=ATE.RUV4)) + geom_point() + theme(axis.text.x=element_blank(),axis.ticks.x=element_blank())
+
+print(pnew)
+
+cat(knitr::knit_expand(text=paste0("\n\n")))
+
+
+```
+:::
+
+### Changing the $\delta$ values
+
+::: panel-tabset
+```{r}
+
+deltas <- c(0.5,1,1.5,2)
+
+diffDelta <- lapply(deltas, function (x) bigMSE(it=it,gm=x, dg=30,relationship='confounder'))
+
+est.alphas <- lapply(diffDelta, function(x) x$alphas)
+diffDelta.alpha0 <- lapply(diffDelta, function(x) x$mse_alpha)
+est.alphas1 <- lapply(est.alphas, function (x) x[[1]])
+Delta.MSE.alpha.plots <- plotMetric(diffDelta.alpha0, est = est.alphas1,xlab="Delta")
+
+diffDelta.alpha0 <- lapply(diffDelta, function(x) x$var_alpha)
+Delta.Var.alpha.plots <- plotMetric(diffDelta.alpha0, est = est.alphas1,xlab="Delta")
+
+diffDelta.alpha0 <- lapply(diffDelta, function(x) x$bias_alpha)
+Delta.Bias.alpha.plots <- plotMetric(diffDelta.alpha0, est = est.alphas1,xlab="Delta")
+
+
+est.betas <- lapply(diffDelta, function(x) x$betas)
+est.betas1 <- lapply(est.betas, function (x) x[[1]])
+# add gene labels
+diffDelta.beta0 <- lapply(diffDelta, function(x) x$mse_beta)
+Delta.MSE.beta.plots <- plotMetric(diffDelta.beta0, est = est.betas1,xlab="Delta")
+
+diffDelta.beta0 <- lapply(diffDelta, function(x) x$var_beta)
+Delta.Var.beta.plots <- plotMetric(diffDelta.beta0, est = est.betas1,xlab="Delta")
+
+diffDelta.beta0 <- lapply(diffDelta, function(x) x$bias_beta)
+Delta.Bias.beta.plots <- plotMetric(diffDelta.beta0, est = est.betas1,xlab="Delta")
+
+
+
+
+```
+
+```{r, results='asis'}
+
+# cat(knitr::knit_expand(text=paste0('\n#### ','One gene', '{-}\n')))
+#
+# print(ggarrange(Delta.MSE.alpha.plots$p.1gene,Delta.MSE.beta.plots$p.1gene,common.legend = F ))
+# print(ggarrange(Delta.Var.alpha.plots$p.1gene,Delta.Var.beta.plots$p.1gene,common.legend = F ))
+# print(ggarrange(Delta.Bias.alpha.plots$p.1gene,Delta.Bias.beta.plots$p.1gene,common.legend = F ))
+#
+# cat(knitr::knit_expand(text=paste0("\n\n")))
+cat(knitr::knit_expand(text=paste0('\n#### ','All genes', '{-}\n')))
+
+
+print(ggarrange(Delta.MSE.alpha.plots$p.allgenes,Delta.MSE.beta.plots$p.allgenes,common.legend = F,labels='MSE'))
+print(ggarrange(Delta.Var.alpha.plots$p.allgenes,Delta.Var.beta.plots$p.allgenes,common.legend = F ,labels='Variance'))
+print(ggarrange(Delta.Bias.alpha.plots$p.allgenes,Delta.Bias.beta.plots$p.allgenes,common.legend = F,labels='Bias2' ))
+
+cat(knitr::knit_expand(text=paste0("\n\n")))
+cat(knitr::knit_expand(text=paste0('\n#### ','MSE Vs true parameter', '{-}\n')))
+
+print(ggarrange(Delta.MSE.alpha.plots$p.estMetric,Delta.MSE.beta.plots$p.estMetric,common.legend = F,labels='MSE' ))
+print(ggarrange(Delta.Var.alpha.plots$p.estMetric,Delta.Var.beta.plots$p.estMetric,common.legend = F,labels='Variance' ))
+print(ggarrange(Delta.Bias.alpha.plots$p.estMetric,Delta.Bias.beta.plots$p.estMetric,common.legend = F,labels='Bias2' ))
+cat(knitr::knit_expand(text=paste0("\n\n")))
+
+```
+:::
+:::
+:::
